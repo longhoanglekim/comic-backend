@@ -1,0 +1,114 @@
+version: '3'
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: minio_storage
+    ports:
+      - "9000:9000" # Port cho API
+      - "9001:9001" # Port cho giao diện Web Admin
+    environment:
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD}"
+    volumes:
+      - ./minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - comic-network
+
+  db:
+    image: postgres:15-alpine
+    container_name: comic_db
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-comic}"
+      POSTGRES_USER: "${POSTGRES_USER:-postgres}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-postgres}"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+      - ./db/insert-data.sql:/insert-data.sql
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-comic}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - comic-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: comic-backend
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: "jdbc:postgresql://db:5432/${POSTGRES_DB:-comic}"
+      DB_USERNAME: "${POSTGRES_USER:-postgres}"
+      DB_PASSWORD: "${POSTGRES_PASSWORD:-postgres}"
+      MINIO_ENDPOINT: "http://minio:9000"
+      MINIO_ACCESS_KEY: "${MINIO_ACCESS_KEY:-admin}"
+      MINIO_SECRET_KEY: "${MINIO_SECRET_KEY:-password123}"
+      MINIO_BUCKET: "${MINIO_BUCKET:-comic}"
+      MINIO_PUBLIC_BASE_URL: "${MINIO_PUBLIC_BASE_URL:-http://localhost:9000/comic}"
+      MINIO_INTERNAL_BASE_URL: "http://minio:9000/comic"
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:-change-me-to-secure-value}"
+      OTP_EXPIRATION_SECONDS: "${OTP_EXPIRATION_SECONDS:-300}"
+      OTP_MAIL_FROM: "${OTP_MAIL_FROM:-no-reply@comic.local}"
+      MAIL_USERNAME: "${MAIL_USERNAME}"
+      MAIL_PASSWORD: "${MAIL_PASSWORD}"
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+      SPRING_ELASTICSEARCH_URIS: "http://elasticsearch:9200"
+      SPRING_DATA_REDIS_HOST: "redis"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+      ELASTICSEARCH_URIS: "http://elasticsearch:9200"
+      SERVER_PORT: "8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - comic-network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: comic_pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "admin@example.com"
+      PGADMIN_DEFAULT_PASSWORD: "admin123"
+    depends_on:
+      - db
+    restart: on-failure
+    networks:
+      - comic-network
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
+    container_name: comic_elasticsearch
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    mem_limit: 1g
+    restart: on-failure
+    networks:
+      - comic-network
+
+  redis:
+    image: redis:7-alpine
+    restart: on-failure
+    networks:
+      - comic-network
+
+networks:
+  comic-network:
+    external: true
