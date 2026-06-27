@@ -5,7 +5,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.elasticsearch.repository.config.EnableElasticsearchRepositories;
 
 @Configuration
-@EnableElasticsearchRepositories(basePackages = "com.example.comic.repository.search")
-@ConditionalOnProperty(prefix = "spring.elasticsearch", name = "uris")
+@ConditionalOnProperty(
+        name = "elasticsearch.enabled",
+        havingValue = "true"
+)
+@EnableElasticsearchRepositories(
+        basePackages = "com.example.comic.repository.search"
+)
 public class ElasticsearchConfig {
 }
