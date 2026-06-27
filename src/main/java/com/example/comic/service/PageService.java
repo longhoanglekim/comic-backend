@@ -28,7 +28,7 @@ import org.springframework.cache.annotation.Cacheable;
 public class PageService {
 
     private final ChapterPageRepository chapterPageRepository;
-    private final PageCachedService pageCachedService;
+    private final PageCacheService pageCacheService;
     private final ApplicationEventPublisher eventPublisher;
     private final SecurityUtils securityUtils;
     private final UserRepository userRepository;
@@ -36,7 +36,7 @@ public class PageService {
     private final ReadingHistoryRepository readingHistoryRepository;
     @Transactional
     public PageDetailResponse getPageDetail(Long pageId, String lang) {
-        PageDetailResponse pageDetailResponse = pageCachedService.getPageDetailCached(pageId, lang);
+        PageDetailResponse pageDetailResponse = pageCacheService.getPageDetailCached(pageId, lang);
         updateReadingHistory(pageId);
         return pageDetailResponse;
     }

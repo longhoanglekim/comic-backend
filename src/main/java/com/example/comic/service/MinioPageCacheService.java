@@ -22,7 +22,7 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @ConditionalOnProperty(name = "application.storage.minio.enabled", havingValue = "true", matchIfMissing = false)
-public class PageCachedService {
+public class MinioPageCacheService implements PageCacheService {
     private final PageTranslationRepository pageTranslationRepository;
     private final MinioStorageService minioStorageService;
     private final ObjectMapper objectMapper;
