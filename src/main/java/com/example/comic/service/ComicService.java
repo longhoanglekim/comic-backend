@@ -14,6 +14,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -41,7 +42,8 @@ public class ComicService {
     private final ComicCategoryRepository comicCategoryRepository;
     private final ChapterCommentRepository chapterCommentRepository;
     private final CurrentUserService currentUserService;
-    private final MinioStorageService minioStorageService;
+    @Autowired(required = false)
+    private MinioStorageService minioStorageService;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final PipelineProducerService pipelineProducerService;
     private final UserLibraryRepository userLibraryRepository;
@@ -63,6 +65,7 @@ public class ComicService {
             throw new IllegalArgumentException("Ảnh bìa là bắt buộc.");
         }
 
+        requireMinio();
         validateUploadFile(coverImage);
 
         Comic comic = Comic
@@ -130,6 +133,7 @@ public class ComicService {
         }
 
         if (coverImage != null && !coverImage.isEmpty()) {
+            requireMinio();
             validateUploadFile(coverImage);
             if (comic.getCoverImageUrl() != null && !comic.getCoverImageUrl().isBlank()) {
                 try {
@@ -367,6 +371,7 @@ public class ComicService {
             throw new IllegalArgumentException("Vui lòng chọn ít nhất một ảnh để tải lên.");
         }
 
+        requireMinio();
         validateUploadFiles(files);
 
         int pageNumber = Math.max(1, startPageNumber);
@@ -424,6 +429,7 @@ public class ComicService {
                 .findById(pageId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy trang truyện."));
 
+        requireMinio();
         minioStorageService.deleteObject(page.getImageUrl());
         minioStorageService.deleteObject(page.getCleanedImageUrl());
         chapterPageRepository.delete(page);
@@ -437,6 +443,7 @@ public class ComicService {
                 .findById(chapterId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy chương truyện."));
 
+        requireMinio();
         List<ChapterPage> pages = chapterPageRepository.findByChapterIdOrderByPageNumberAsc(chapterId);
         for (ChapterPage page : pages) {
             minioStorageService.deleteObject(page.getImageUrl());
@@ -467,6 +474,13 @@ public class ComicService {
         comicRepository.save(comic);
 
         return ComicRatingResponse.builder().newAverageRating(avg).totalRatings(total).build();
+    }
+
+    private void requireMinio() {
+        if (minioStorageService == null) {
+            throw new IllegalStateException(
+                    "MinIO storage is disabled. Enable it via 'application.storage.minio.enabled=true' to use this feature.");
+        }
     }
 
     private int normalizePage(int page) {
@@ -539,9 +553,9 @@ public class ComicService {
                 .builder()
                 .id(page.getId())
                 .pageNumber(page.getPageNumber())
-                .imageUrl(minioStorageService.resolvePublicUrl(page.getImageUrl()))
-                .cleanedImageUrl(minioStorageService.resolvePublicUrl(page.getCleanedImageUrl()))
-                .originalMetadataUrl(minioStorageService.resolvePublicUrl(page.getOriginalMetadataUrl()))
+                .imageUrl(minioStorageService != null ? minioStorageService.resolvePublicUrl(page.getImageUrl()) : page.getImageUrl())
+                .cleanedImageUrl(minioStorageService != null ? minioStorageService.resolvePublicUrl(page.getCleanedImageUrl()) : page.getCleanedImageUrl())
+                .originalMetadataUrl(minioStorageService != null ? minioStorageService.resolvePublicUrl(page.getOriginalMetadataUrl()) : page.getOriginalMetadataUrl())
                 .build();
     }
 
@@ -553,6 +567,7 @@ public class ComicService {
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy chương truyện."));
 
         List<ChapterPage> pages = chapterPageRepository.findByChapterIdOrderByPageNumberAsc(chapterId);
+        requireMinio();
         for (ChapterPage page : pages) {
             if (page.getImageUrl() != null) {
                 minioStorageService.deleteObject(page.getImageUrl());
@@ -573,6 +588,7 @@ public class ComicService {
         Comic comic = comicRepository.findById(comicId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy bộ truyện."));
 
+        requireMinio();
         if (comic.getCoverImageUrl() != null && !comic.getCoverImageUrl().isBlank()) {
             try {
                 minioStorageService.deleteObject(comic.getCoverImageUrl());
