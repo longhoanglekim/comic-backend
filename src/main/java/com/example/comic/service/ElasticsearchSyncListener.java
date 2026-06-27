@@ -7,6 +7,7 @@ import com.example.comic.model.document.ComicDocument;
 import com.example.comic.repository.search.ComicSearchRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "elasticsearch.enabled", havingValue = "true")
 public class ElasticsearchSyncListener {
 
     private final ComicSearchRepository comicSearchRepository;
@@ -54,3 +56,4 @@ public class ElasticsearchSyncListener {
         }
     }
 }
+
