@@ -8,6 +8,7 @@ import com.example.comic.model.dto.ComicSearchResult;
 import com.example.comic.model.dto.ReindexResponse;
 import com.example.comic.service.ComicSearchService;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import com.example.comic.service.ComicService;
@@ -34,7 +35,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class ComicController {
 
     private final ComicService comicService;
-    private final ComicSearchService comicSearchService;
+    private final Optional<ComicSearchService> comicSearchService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<DataResponse<ComicCreateResponse>> createComic(
@@ -108,7 +109,7 @@ public class ComicController {
             @RequestParam(defaultValue = "20") int limit) {
         return ResponseEntity.ok(
                 DataResponse.<List<ComicSearchResult>>builder()
-                        .data(comicSearchService.searchComics(keyword, limit))
+                        .data(comicSearchService.get().searchComics(keyword, limit))
                         .build());
     }
 
@@ -118,7 +119,7 @@ public class ComicController {
             @RequestParam(defaultValue = "20") int limit) {
         return ResponseEntity.ok(
                 DataResponse.<PageDataResponse<ComicDetailSearchResult>>builder()
-                        .data(comicSearchService.searchComicsDetail(keyword, limit))
+                        .data(comicSearchService.get().searchComicsDetail(keyword, limit))
                         .build());
     }
 

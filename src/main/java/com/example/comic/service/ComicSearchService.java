@@ -9,6 +9,7 @@ import com.example.comic.repository.search.ComicSearchRepository;
 import java.util.Collections;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -20,6 +21,10 @@ import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.stereotype.Service;
 
 @Service
+@ConditionalOnProperty(
+        name = "elasticsearch.enabled",
+        havingValue = "true"
+)
 @RequiredArgsConstructor
 public class ComicSearchService {
 
